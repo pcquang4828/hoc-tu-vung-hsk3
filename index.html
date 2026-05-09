@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Tiếng Trung Của Tôi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .flip-card { perspective: 1000px; }
+        .flip-card-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            position: relative;
+            width: 100%; height: 100%;
+        }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back {
+            backface-visibility: hidden;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .flip-card-front {
+            background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .flip-card-back {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+            padding: 1.5rem;
+            display: flex; flex-direction: column; justify-content: center;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-blue-50 min-h-screen font-sans text-gray-800 py-8">
+
+    <div class="max-w-2xl mx-auto px-4">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-700 mb-2">Trạm Học Từ Vựng</h1>
+            <p id="status-text" class="text-gray-500">Đang tải dữ liệu từ Google Sheets...</p>
+        </div>
+
+        <div class="flex justify-between items-center mb-4 px-2">
+            <div class="text-sm text-gray-600 font-medium">
+                Thẻ <span id="current-index" class="text-blue-600 font-bold text-lg">0</span> / <span id="total-cards">0</span>
+            </div>
+            <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
+                <input type="checkbox" id="shuffleToggle" class="w-4 h-4 text-blue-600 rounded" onchange="toggleShuffle()">
+                <label for="shuffleToggle" class="text-sm font-medium text-gray-700 cursor-pointer">Xáo trộn từ</label>
+            </div>
+        </div>
+
+        <div class="relative w-full h-[28rem] cursor-pointer flip-card mb-8" id="flashcard">
+            <div class="flip-card-inner">
+                <div class="flip-card-front" onclick="flipCard()">
+                    <h2 class="text-8xl font-bold text-gray-800 mb-6" id="fc-word">...</h2>
+                    
+                    <button onclick="speakWord(event)" class="bg-blue-100 hover:bg-blue-200 text-blue-600 p-4 rounded-full transition-colors shadow-sm mb-4">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"></path></svg>
+                    </button>
+                    <p class="text-gray-400 text-sm animate-pulse">Chạm vào nền trắng để lật thẻ</p>
+                </div>
+
+                <div class="flip-card-back" onclick="flipCard()">
+                    <div class="text-center mb-6 border-b pb-4">
+                        <p class="text-3xl font-bold text-blue-600 mb-1" id="fc-pinyin">Pinyin</p>
+                        <p class="text-sm text-gray-500 font-medium bg-gray-100 inline-block px-2 py-1 rounded mb-2" id="fc-type">Loại từ</p>
+                        <p class="text-2xl font-semibold text-gray-800" id="fc-meaning">Nghĩa tiếng Việt</p>
+                    </div>
+                    
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">Mẫu câu ví dụ</p>
+                        <p class="text-xl font-medium text-gray-800 mb-1" id="fc-ex-cn">Mẫu câu tiếng Trung</p>
+                        <p class="text-md text-gray-600 mb-2" id="fc-ex-pinyin">Phiên âm mẫu câu</p>
+                        <p class="text-md text-indigo-700 font-medium" id="fc-ex-vn">Nghĩa của câu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex space-x-4">
+            <button onclick="prevCard()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-4 px-4 rounded-xl shadow-sm transition">
+                &larr; Lùi lại
+            </button>
+            <button onclick="nextCard()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-md transition">
+                Tiếp theo &rarr;
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // === BẠN CHỈ CẦN THAY ĐỔI ĐOẠN ID NÀY ===
+        const SHEET_ID = '1xxNXhJK-Hk9lh53TTMO-6LQuG3bL4Lr7rLbM3GXMozQ';
+        // =======================================
+
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+        let masterData = [];
+        let currentList = [];
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        // Tự động lấy dữ liệu khi mở web
+        async function fetchData() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                parseCSV(csvText);
+            } catch (error) {
+                document.getElementById('status-text').innerHTML = "<span class='text-red-500'>Lỗi tải dữ liệu. Hãy kiểm tra lại ID hoặc quyền chia sẻ của Google Sheet!</span>";
+            }
+        }
+
+        // Đọc file CSV
+        function parseCSV(text) {
+            let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
+            for (l of text) {
+                if ('"' === l) {
+                    if (s && l === p) row[i] += l;
+                    s = !s;
+                } else if (',' === l && s) l = row[++i] = '';
+                else if ('\n' === l && s) {
+                    if ('\r' === p) row[i] = row[i].slice(0, -1);
+                    row = ret[++r] = [l = '']; i = 0;
+                } else row[i] += l;
+                p = l;
+            }
+            const data = ret.filter(r => r.length > 1 || r[0] !== '');
+            
+            // Bỏ qua dòng tiêu đề (dòng đầu tiên)
+            masterData = [];
+            for (let j = 1; j < data.length; j++) {
+                const d = data[j];
+                if (d.length >= 8 && d[1].trim() !== "") {
+                    masterData.push({
+                        word: d[1].trim(),
+                        pinyin: d[2].trim(),
+                        type: d[3].trim(),
+                        meaning: d[4].trim(),
+                        exCn: d[5].trim(),
+                        exPinyin: d[6].trim(),
+                        exVn: d[7].trim()
+                    });
+                }
+            }
+
+            if (masterData.length > 0) {
+                document.getElementById('status-text').innerText = "Dữ liệu đã được đồng bộ tự động!";
+                currentList = [...masterData];
+                document.getElementById('total-cards').innerText = currentList.length;
+                updateUI();
+            } else {
+                document.getElementById('status-text').innerHTML = "<span class='text-red-500'>Không tìm thấy từ vựng. Hãy kiểm tra lại cấu trúc cột Google Sheet!</span>";
+            }
+        }
+
+        // Cập nhật giao diện thẻ
+        function updateUI() {
+            if (currentList.length === 0) return;
+            
+            const card = document.getElementById('flashcard');
+            if (isFlipped) {
+                card.classList.remove('flipped');
+                isFlipped = false;
+                setTimeout(populateData, 300); // Đợi thẻ úp lại rồi mới đổi chữ
+            } else {
+                populateData();
+            }
+        }
+
+        function populateData() {
+            const item = currentList[currentIndex];
+            document.getElementById('fc-word').innerText = item.word;
+            document.getElementById('fc-pinyin').innerText = item.pinyin;
+            document.getElementById('fc-type').innerText = item.type;
+            document.getElementById('fc-meaning').innerText = item.meaning;
+            
+            document.getElementById('fc-ex-cn').innerText = item.exCn || "Chưa có ví dụ";
+            document.getElementById('fc-ex-pinyin').innerText = item.exPinyin || "";
+            document.getElementById('fc-ex-vn').innerText = item.exVn || "";
+            
+            document.getElementById('current-index').innerText = currentIndex + 1;
+        }
+
+        // Lật thẻ
+        function flipCard() {
+            isFlipped = !isFlipped;
+            document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
+        }
+
+        // Điều hướng
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % currentList.length;
+            updateUI();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + currentList.length) % currentList.length;
+            updateUI();
+        }
+
+        // Tính năng xáo trộn
+        function toggleShuffle() {
+            const isChecked = document.getElementById('shuffleToggle').checked;
+            if (isChecked) {
+                for (let i = currentList.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [currentList[i], currentList[j]] = [currentList[j], currentList[i]];
+                }
+            } else {
+                currentList = [...masterData];
+            }
+            currentIndex = 0;
+            updateUI();
+        }
+
+        // Tính năng Phát âm (Text-to-Speech)
+        function speakWord(event) {
+            event.stopPropagation(); // Ngăn không cho thẻ lật khi bấm nút loa
+            
+            if (currentList.length === 0) return;
+            const textToSpeak = currentList[currentIndex].word;
+            
+            // Sử dụng Web Speech API
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'zh-CN'; // Cài đặt giọng đọc tiếng Trung Quốc
+                utterance.rate = 0.9; // Tốc độ đọc (1 là bình thường, 0.9 là hơi chậm lại một chút cho dễ nghe)
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Trình duyệt của bạn không hỗ trợ tính năng phát âm!");
+            }
+        }
+
+        // Chạy khi mở trang
+        fetchData();
+    </script>
+</body>
+</html>
