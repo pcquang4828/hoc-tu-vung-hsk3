@@ -3,180 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSK3 Flash Card Ôn Tập Từ Vựng</title>
+    <title>Trạm Học Tổng Hợp: Từ Vựng & Ngữ Pháp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .flip-card { perspective: 1000px; }
         .flip-card-inner {
             transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
             transform-style: preserve-3d;
-            position: relative;
-            width: 100%; height: 100%;
+            position: relative; width: 100%; height: 100%;
         }
         .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
         .flip-card-front, .flip-card-back {
             backface-visibility: hidden;
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
         .flip-card-front {
             background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .flip-card-back {
-            background-color: #ffffff;
-            transform: rotateY(180deg);
-            padding: 1.5rem;
-            display: flex; flex-direction: column; justify-content: center;
-            overflow-y: auto;
+            background-color: #ffffff; transform: rotateY(180deg); padding: 1.5rem;
+            display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
         }
-        .tab-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: bold; }
-        .tab-inactive { border-bottom: 4px solid transparent; color: #6b7280; font-weight: normal; }
+        
+        /* Style cho các nút Tab điều hướng chính */
+        .tab-btn { padding: 0.5rem 1rem; transition: all 0.3s; font-weight: 500; border-bottom: 4px solid transparent; }
+        .tab-light-active { border-color: #2563eb; color: #2563eb; font-weight: bold; }
+        .tab-light-inactive { color: #6b7280; }
+        .tab-dark-active { border-color: #60a5fa; color: #60a5fa; font-weight: bold; }
+        .tab-dark-inactive { color: #9ca3af; }
+        
+        /* Định dạng nội dung lý thuyết ngữ pháp */
+        .grammar-content { white-space: pre-line; }
+        .grammar-content p { margin-bottom: 0.5rem; }
     </style>
 </head>
-<body class="bg-blue-50 min-h-screen font-sans text-gray-800 py-8">
+<body id="body-app" class="bg-blue-50 min-h-screen font-sans text-gray-800 py-8 transition-colors duration-500">
 
     <div class="max-w-2xl mx-auto px-4">
         <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-blue-700 mb-2">Ôn Tập Từ Vựng</h1>
-            <p id="status-text" class="text-gray-500">Đang tải dữ liệu từ Google Sheets...</p>
+            <h1 id="main-title" class="text-3xl font-bold text-blue-700 mb-2 transition-colors">Trạm Học Tổng Hợp</h1>
+            <p id="status-text" class="text-gray-500 transition-colors">Đang kết nối kho dữ liệu trực tuyến...</p>
         </div>
 
-        <div class="flex justify-center mb-6 border-b border-gray-300">
-            <button id="btn-tab-1" onclick="switchTab(1)" class="px-6 py-2 tab-active transition">
-                Bộ Từ Vựng HSK 3
-            </button>
-            <button id="btn-tab-2" onclick="switchTab(2)" class="px-6 py-2 tab-inactive hover:text-blue-500 transition">
-                Bộ Từ Vựng SHZ
-            </button>
+        <div id="tab-bar" class="flex justify-between md:justify-center md:space-x-4 mb-6 border-b border-gray-300 overflow-x-auto pb-1">
+            <button id="btn-tab-1" onclick="switchTab(1)" class="tab-btn tab-light-active whitespace-nowrap">Từ vựng đầy đủ</button>
+            <button id="btn-tab-2" onclick="switchTab(2)" class="tab-btn tab-light-inactive whitespace-nowrap">Từ vựng ngắn</button>
+            <button id="btn-tab-3" onclick="switchTab(3)" class="tab-btn tab-light-inactive whitespace-nowrap">📚 Ngữ pháp (Đêm)</button>
         </div>
 
-        <div class="flex justify-between items-center mb-4 px-2">
-            <div class="text-sm text-gray-600 font-medium">
-                Thẻ <span id="current-index" class="text-blue-600 font-bold text-lg">0</span> / <span id="total-cards">0</span>
-            </div>
-            <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                <input type="checkbox" id="shuffleToggle" class="w-4 h-4 text-blue-600 rounded" onchange="toggleShuffle()">
-                <label for="shuffleToggle" class="text-sm font-medium text-gray-700 cursor-pointer">Xáo trộn từ</label>
-            </div>
-        </div>
-
-        <div class="relative w-full h-[28rem] cursor-pointer flip-card mb-8" id="flashcard">
-            <div class="flip-card-inner">
-                <div class="flip-card-front" onclick="flipCard()">
-                    <h2 class="text-8xl font-bold text-gray-800 mb-6" id="fc-word">...</h2>
-                    
-                    <button onclick="speakWord(event)" class="bg-blue-100 hover:bg-blue-200 text-blue-600 p-4 rounded-full transition-colors shadow-sm mb-4">
-                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <p class="text-gray-400 text-sm animate-pulse">Chạm vào nền trắng để lật thẻ</p>
+        <div id="section-flashcard" class="block">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <div id="card-counter" class="text-sm text-gray-600 font-medium">
+                    Thẻ <span id="current-index" class="text-blue-600 font-bold text-lg">0</span> / <span id="total-cards">0</span>
                 </div>
+                <div id="shuffle-box" class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
+                    <input type="checkbox" id="shuffleToggle" class="w-4 h-4 text-blue-600 rounded" onchange="toggleShuffle()">
+                    <label for="shuffleToggle" class="text-sm font-medium text-gray-700 cursor-pointer">Xáo trộn từ</label>
+                </div>
+            </div>
 
-                <div class="flip-card-back" onclick="flipCard()">
-                    <div class="text-center mb-6 pb-4" id="fc-back-top-section">
-                        <p class="text-4xl font-bold text-blue-600 mb-2" id="fc-pinyin">Pinyin</p>
-                        <p class="text-sm text-gray-500 font-medium bg-gray-100 inline-block px-2 py-1 rounded mb-3" id="fc-type">Loại từ</p>
-                        <p class="text-3xl font-semibold text-gray-800" id="fc-meaning">Nghĩa tiếng Việt</p>
+            <div class="relative w-full h-[28rem] cursor-pointer flip-card mb-8" id="flashcard">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" onclick="flipCard()">
+                        <h2 class="text-8xl font-bold text-gray-800 mb-6" id="fc-word">...</h2>
+                        <button onclick="speakWord(event)" class="bg-blue-100 hover:bg-blue-200 text-blue-600 p-4 rounded-full transition-colors shadow-sm mb-4">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"></path></svg>
+                        </button>
+                        <p class="text-gray-400 text-sm animate-pulse">Chạm vào để lật thẻ xem nghĩa</p>
                     </div>
-                    
-                    <div class="bg-indigo-50 p-4 rounded-lg" id="fc-example-box">
-                        <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">Mẫu câu ví dụ</p>
-                        <p class="text-xl font-medium text-gray-800 mb-1" id="fc-ex-cn">Mẫu câu tiếng Trung</p>
-                        <p class="text-md text-gray-600 mb-2" id="fc-ex-pinyin">Phiên âm mẫu câu</p>
-                        <p class="text-md text-indigo-700 font-medium" id="fc-ex-vn">Nghĩa của câu</p>
+                    <div class="flip-card-back" onclick="flipCard()">
+                        <div class="text-center mb-6 pb-4">
+                            <p class="text-4xl font-bold text-blue-600 mb-2" id="fc-pinyin">Pinyin</p>
+                            <p class="text-sm text-gray-500 font-medium bg-gray-100 inline-block px-2 py-1 rounded mb-3" id="fc-type">Loại từ</p>
+                            <p class="text-3xl font-semibold text-gray-800" id="fc-meaning">Nghĩa tiếng Việt</p>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-lg" id="fc-example-box">
+                            <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">Mẫu câu ví dụ</p>
+                            <p class="text-xl font-medium text-gray-800 mb-1" id="fc-ex-cn">Mẫu câu tiếng Trung</p>
+                            <p class="text-md text-gray-600 mb-2" id="fc-ex-pinyin">Phiên âm mẫu câu</p>
+                            <p class="text-md text-indigo-700 font-medium" id="fc-ex-vn">Nghĩa của câu</p>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="flex space-x-4">
+                <button onclick="prevCard()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-4 px-4 rounded-xl shadow-sm transition">
+                    &larr; Lùi lại
+                </button>
+                <button onclick="nextCard()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-md transition">
+                    Tiếp theo &rarr;
+                </button>
+            </div>
         </div>
 
-        <div class="flex space-x-4">
-            <button onclick="prevCard()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-4 px-4 rounded-xl shadow-sm transition">
-                &larr; Lùi lại
-            </button>
-            <button onclick="nextCard()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-md transition">
-                Tiếp theo &rarr;
-            </button>
+        <div id="section-grammar" class="hidden">
+            <div class="flex justify-center space-x-2 mb-6">
+                <button id="filter-all" onclick="filterGrammar('ALL')" class="px-3 py-1 text-xs rounded-full font-bold bg-blue-500 text-white shadow">Tất cả</button>
+                <button id="filter-hsk1" onclick="filterGrammar('HSK1')" class="px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800">HSK 1</button>
+                <button id="filter-hsk2" onclick="filterGrammar('HSK2')" class="px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800">HSK 2</button>
+                <button id="filter-hsk3" onclick="filterGrammar('HSK3')" class="px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800">HSK 3</button>
+            </div>
+
+            <div id="grammar-list" class="space-y-4">
+                </div>
         </div>
+
     </div>
 
     <script>
-        // === BẠN CHỈ CẦN THAY ĐỔI 2 ĐOẠN ID NÀY ===
+        // === KHAI BÁO CÁC ID DỮ LIỆU CỦA BẠN ===
         const SHEET_ID_1 = '1xxNXhJK-Hk9lh53TTMO-6LQuG3bL4Lr7rLbM3GXMozQ';
         const SHEET_ID_2 = '1_ez_0lFsXbdyT-qaU3YqPlfETmG9uXMcvUqGrf8D34o';
-        // ==========================================
+        const DOC_ID_3 = '1wDstx508OZkXZrVYdyD8yBBDGmg-C-437WsPuM5dBJY'; // <-- Dán ID của Google Docs vào đây
+        // =======================================
 
         const URL_1 = `https://docs.google.com/spreadsheets/d/${SHEET_ID_1}/export?format=csv`;
         const URL_2 = `https://docs.google.com/spreadsheets/d/${SHEET_ID_2}/export?format=csv&gid=192802101`;
+        // Xuất bản Google Docs dưới dạng mã HTML sạch để phân tích thẻ h1, h2
+        const URL_3 = `https://docs.google.com/document/d/${DOC_ID_3}/export?format=html`;
 
-        let dataTab1 = []; // Chứa dữ liệu HSK3 (có ví dụ)
-        let dataTab2 = []; // Chứa dữ liệu Ngắn (chỉ có pinyin, nghĩa)
-        
-        let activeTab = 1; 
-        let currentList = [];
-        let currentIndex = 0;
-        let isFlipped = false;
+        let dataTab1 = [], dataTab2 = [], dataGrammar = [];
+        let activeTab = 1, currentList = [], currentIndex = 0, isFlipped = false;
 
-        // Tải dữ liệu từ cả 2 file cùng lúc
+        // Tải toàn bộ kho dữ liệu trực tuyến
         async function fetchAllData() {
             try {
-                const [res1, res2] = await Promise.all([fetch(URL_1), fetch(URL_2)]);
-                const csv1 = await res1.text();
-                const csv2 = await res2.text();
+                const [res1, res2, res3] = await Promise.all([fetch(URL_1), fetch(URL_2), fetch(URL_3)]);
+                const csv1 = await res1.text(), csv2 = await res2.text(), htmlDocs = await res3.text();
                 
                 parseData1(csv1);
                 parseData2(csv2);
+                parseGrammarFromDocs(htmlDocs); // Gọi hàm xử lý cấu trúc Google Docs
                 
-                document.getElementById('status-text').innerText = "Dữ liệu đã được đồng bộ tự động!";
-                switchTab(1); // Mặc định mở Tab 1 đầu tiên
+                document.getElementById('status-text').innerText = "Đồng bộ toàn bộ kho dữ liệu thành công!";
+                switchTab(1);
             } catch (error) {
-                document.getElementById('status-text').innerHTML = "<span class='text-red-500'>Lỗi tải dữ liệu. Hãy kiểm tra lại ID của cả 2 Google Sheets!</span>";
+                document.getElementById('status-text').innerHTML = "<span class='text-red-500 font-bold'>⚠️ Lỗi đồng bộ. Hãy kiểm tra lại quyền chia sẻ liên kết của các file!</span>";
             }
         }
 
-        // Bóc tách dữ liệu File 1 (8 cột)
         function parseData1(text) {
-            let data = csvToArray(text);
-            dataTab1 = [];
+            let data = csvToArray(text); dataTab1 = [];
             for (let j = 1; j < data.length; j++) {
                 if (data[j].length >= 5 && data[j][1].trim() !== "") {
                     dataTab1.push({
-                        word: data[j][1].trim(),
-                        pinyin: data[j][2].trim(),
-                        type: data[j][3].trim(),
-                        meaning: data[j][4].trim(),
-                        exCn: data[j][5] ? data[j][5].trim() : "",
-                        exPinyin: data[j][6] ? data[j][6].trim() : "",
-                        exVn: data[j][7] ? data[j][7].trim() : ""
+                        word: data[j][1].trim(), pinyin: data[j][2].trim(), type: data[j][3].trim(), meaning: data[j][4].trim(),
+                        exCn: data[j][5] ? data[j][5].trim() : "", exPinyin: data[j][6] ? data[j][6].trim() : "", exVn: data[j][7] ? data[j][7].trim() : ""
                     });
                 }
             }
         }
 
-        // Bóc tách dữ liệu File 2 (4 cột)
         function parseData2(text) {
-            let data = csvToArray(text);
-            dataTab2 = [];
+            let data = csvToArray(text); dataTab2 = [];
             for (let j = 1; j < data.length; j++) {
                 if (data[j].length >= 4 && data[j][1].trim() !== "") {
-                    dataTab2.push({
-                        word: data[j][1].trim(),
-                        pinyin: data[j][2].trim(),
-                        type: "", // File 2 không có loại từ
-                        meaning: data[j][3].trim()
-                    });
+                    dataTab2.push({ word: data[j][1].trim(), pinyin: data[j][2].trim(), type: "", meaning: data[j][3].trim() });
                 }
             }
         }
 
-        // Hàm hỗ trợ tách CSV chuẩn xác
+        // BỘ GIẢI MÃ THÔNG MINH: Bóc tách cấu trúc Google Docs thành các khối lý thuyết độc lập
+        function parseGrammarFromDocs(htmlText) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            
+            // Tìm tất cả các thẻ tiêu đề và thẻ văn bản trong file văn bản
+            const elements = doc.body.querySelectorAll('h1, h2, p, li');
+            dataGrammar = [];
+            
+            let currentLevel = "CHƯA PHÂN LOẠI";
+            let currentTitle = "";
+            let currentContent = [];
+            
+            elements.forEach(el => {
+                const tag = el.tagName.toLowerCase();
+                const text = el.textContent.trim();
+                
+                if (!text) return; // Bỏ qua dòng trống rỗng
+                
+                if (tag === 'h1') {
+                    // Nếu gặp Heading 1 (Ví dụ: HSK 1, HSK 2) -> Lưu chủ đề cũ trước đó nếu có
+                    if (currentTitle) {
+                        dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContent.join('<br>') });
+                    }
+                    currentLevel = text.toUpperCase(); // Đổi tên thẻ lớn
+                    currentTitle = "";
+                    currentContent = [];
+                } else if (tag === 'h2') {
+                    // Nếu gặp Heading 2 (Tên chủ đề con) -> Lưu lại chủ đề cũ vừa chạy xong
+                    if (currentTitle) {
+                        dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContent.join('<br>') });
+                    }
+                    currentTitle = text; // Thiết lập tên thẻ con mới
+                    currentContent = [];
+                } else {
+                    // Nếu là văn bản bình thường (p hoặc li) -> Gom dòng lý thuyết vào chủ đề hiện tại
+                    if (currentTitle) {
+                        currentContent.push(text);
+                    }
+                }
+            });
+            
+            // Đẩy nốt phần nội dung cuối cùng của file vào danh sách
+            if (currentTitle) {
+                dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContent.join('<br>') });
+            }
+        }
+
         function csvToArray(text) {
             let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
             for (l of text) {
-                if ('"' === l) {
-                    if (s && l === p) row[i] += l; s = !s;
-                } else if (',' === l && s) l = row[++i] = '';
+                if ('"' === l) { if (s && l === p) row[i] += l; s = !s; } 
+                else if (',' === l && s) l = row[++i] = '';
                 else if ('\n' === l && s) {
                     if ('\r' === p) row[i] = row[i].slice(0, -1);
                     row = ret[++r] = [l = '']; i = 0;
@@ -186,45 +228,117 @@
             return ret.filter(r => r.length > 1 || r[0] !== '');
         }
 
-        // Chuyển đổi qua lại giữa 2 Tab
+        // ĐỔI TAB CHỨC NĂNG & ĐỔI THEME SÁNG - TỐI TỰ ĐỘNG
         function switchTab(tabNumber) {
             activeTab = tabNumber;
-            const btn1 = document.getElementById('btn-tab-1');
-            const btn2 = document.getElementById('btn-tab-2');
             
-            if (tabNumber === 1) {
-                btn1.className = "px-6 py-2 tab-active transition";
-                btn2.className = "px-6 py-2 tab-inactive hover:text-blue-500 transition";
-                currentList = [...dataTab1];
-            } else {
-                btn2.className = "px-6 py-2 tab-active transition";
-                btn1.className = "px-6 py-2 tab-inactive hover:text-blue-500 transition";
-                currentList = [...dataTab2];
-            }
+            const body = document.getElementById('body-app');
+            const mainTitle = document.getElementById('main-title');
+            const statusText = document.getElementById('status-text');
+            const tabBar = document.getElementById('tab-bar');
             
-            // Xóa bỏ trạng thái xáo trộn mỗi khi đổi Tab
-            document.getElementById('shuffleToggle').checked = false;
+            const secFlashcard = document.getElementById('section-flashcard');
+            const secGrammar = document.getElementById('section-grammar');
             
-            // Đảm bảo thẻ đang úp khi đổi Tab
             isFlipped = false;
             document.getElementById('flashcard').classList.remove('flipped');
-            
-            currentIndex = 0;
-            document.getElementById('total-cards').innerText = currentList.length;
-            updateUI();
+            document.getElementById('shuffleToggle').checked = false;
+
+            if (tabNumber === 3) {
+                // KÍCH HOẠT GIAO DIỆN TỐI (DARK MODE) CHO TAB NGỮ PHÁP
+                body.className = "bg-gray-950 min-h-screen font-sans text-gray-100 py-8 transition-colors duration-500";
+                mainTitle.className = "text-3xl font-bold text-blue-400 mb-2 transition-colors";
+                statusText.className = "text-gray-400 text-sm transition-colors";
+                tabBar.className = "flex justify-between md:justify-center md:space-x-4 mb-6 border-b border-gray-700 overflow-x-auto pb-1";
+                
+                secFlashcard.classList.add('hidden');
+                secGrammar.classList.remove('hidden');
+                
+                updateTabButtonsStyle(true);
+                renderGrammarList(dataGrammar); // In dữ liệu từ Google Docs ra
+            } else {
+                // TRỞ LẠI GIAO DIỆN SÁNG (LIGHT MODE) CHO TAB TỪ VỰNG
+                body.className = "bg-blue-50 min-h-screen font-sans text-gray-800 py-8 transition-colors duration-500";
+                mainTitle.className = "text-3xl font-bold text-blue-700 mb-2 transition-colors";
+                statusText.className = "text-gray-500 text-sm transition-colors";
+                tabBar.className = "flex justify-between md:justify-center md:space-x-4 mb-6 border-b border-gray-300 overflow-x-auto pb-1";
+                
+                secGrammar.classList.add('hidden');
+                secFlashcard.classList.remove('hidden');
+                
+                currentList = (tabNumber === 1) ? [...dataTab1] : [...dataTab2];
+                document.getElementById('total-cards').innerText = currentList.length;
+                
+                updateTabButtonsStyle(false);
+                currentIndex = 0;
+                updateUI();
+            }
         }
 
+        function updateTabButtonsStyle(isDarkMode) {
+            for (let i = 1; i <= 3; i++) {
+                const btn = document.getElementById(`btn-tab-${i}`);
+                if (isDarkMode) {
+                    btn.className = (i === activeTab) ? "tab-btn tab-dark-active" : "tab-btn tab-dark-inactive hover:text-blue-400";
+                } else {
+                    btn.className = (i === activeTab) ? "tab-btn tab-light-active" : "tab-btn tab-light-inactive hover:text-blue-500";
+                }
+            }
+        }
+
+        // ĐỔ DỮ LIỆU NGỮ PHÁP TỪ GOOGLE DOCS THÀNH CÁC KHỐI CHỮ NHẬT
+        function renderGrammarList(list) {
+            const container = document.getElementById('grammar-list');
+            container.innerHTML = '';
+            
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500">Đang đồng bộ hoặc tài liệu trống. Hãy kiểm tra lại định dạng Heading trên Google Docs!</div>`;
+                return;
+            }
+            
+            list.forEach(item => {
+                const div = document.createElement('div');
+                // Tạo hình khối chữ nhật độc lập, viền mịn, chữ sáng dễ nhìn trong đêm
+                div.className = "bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg hover:border-gray-700 transition duration-300 text-left";
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-3 border-b border-gray-800 pb-2">
+                        <h3 class="text-xl font-bold text-blue-400 tracking-wide">${item.title}</h3>
+                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-950 text-blue-400 uppercase tracking-widest border border-blue-900">${item.level}</span>
+                    </div>
+                    <div class="text-gray-300 text-md leading-relaxed grammar-content">${item.content}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function filterGrammar(level) {
+            const filters = ['all', 'hsk1', 'hsk2', 'hsk3'];
+            filters.forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (`filter-${level.toLowerCase().replace(' ', '')}` === `filter-${f}`) {
+                    btn.className = "px-3 py-1 text-xs rounded-full font-bold bg-blue-500 text-white shadow";
+                } else {
+                    btn.className = "px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800";
+                }
+            });
+
+            if (level === 'ALL') {
+                renderGrammarList(dataGrammar);
+            } else {
+                // Lọc chính xác các thẻ con dựa vào tiêu đề Heading 1 chứa chữ HSK 1, HSK 2, HSK 3
+                const filtered = dataGrammar.filter(item => item.level.includes(level));
+                renderGrammarList(filtered);
+            }
+        }
+
+        // --- Các hàm Flashcards từ vựng ---
         function updateUI() {
             if (currentList.length === 0) return;
-            
             const card = document.getElementById('flashcard');
             if (isFlipped) {
-                card.classList.remove('flipped');
-                isFlipped = false;
+                card.classList.remove('flipped'); isFlipped = false;
                 setTimeout(populateData, 300); 
-            } else {
-                populateData();
-            }
+            } else { populateData(); }
         }
 
         function populateData() {
@@ -233,47 +347,24 @@
             document.getElementById('fc-pinyin').innerText = item.pinyin;
             document.getElementById('fc-meaning').innerText = item.meaning;
             
-            // Ẩn/Hiện loại từ
             const typeEl = document.getElementById('fc-type');
-            if (item.type) {
-                typeEl.style.display = "inline-block";
-                typeEl.innerText = item.type;
-            } else {
-                typeEl.style.display = "none";
-            }
+            if (item.type) { typeEl.style.display = "inline-block"; typeEl.innerText = item.type; } 
+            else { typeEl.style.display = "none"; }
             
-            // Ẩn/Hiện ô Ví dụ tùy theo Tab đang chọn
             const exBoxEl = document.getElementById('fc-example-box');
             if (activeTab === 1) {
                 exBoxEl.style.display = "block";
                 document.getElementById('fc-ex-cn').innerText = item.exCn || "Chưa có ví dụ";
                 document.getElementById('fc-ex-pinyin').innerText = item.exPinyin || "";
                 document.getElementById('fc-ex-vn').innerText = item.exVn || "";
-            } else {
-                exBoxEl.style.display = "none"; // Giấu ô ví dụ ở Tab 2
-            }
+            } else { exBoxEl.style.display = "none"; }
             
             document.getElementById('current-index').innerText = currentIndex + 1;
         }
 
-        function flipCard() {
-            isFlipped = !isFlipped;
-            document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
-        }
-
-        function nextCard() {
-            if(currentList.length > 0) {
-                currentIndex = (currentIndex + 1) % currentList.length;
-                updateUI();
-            }
-        }
-
-        function prevCard() {
-            if(currentList.length > 0) {
-                currentIndex = (currentIndex - 1 + currentList.length) % currentList.length;
-                updateUI();
-            }
-        }
+        function flipCard() { isFlipped = !isFlipped; document.getElementById('flashcard').classList.toggle('flipped', isFlipped); }
+        function nextCard() { if(currentList.length > 0) { currentIndex = (currentIndex + 1) % currentList.length; updateUI(); } }
+        function prevCard() { if(currentList.length > 0) { currentIndex = (currentIndex - 1 + currentList.length) % currentList.length; updateUI(); } }
 
         function toggleShuffle() {
             const isChecked = document.getElementById('shuffleToggle').checked;
@@ -282,28 +373,18 @@
                     const j = Math.floor(Math.random() * (i + 1));
                     [currentList[i], currentList[j]] = [currentList[j], currentList[i]];
                 }
-            } else {
-                currentList = activeTab === 1 ? [...dataTab1] : [...dataTab2];
-            }
-            currentIndex = 0;
-            updateUI();
+            } else { currentList = activeTab === 1 ? [...dataTab1] : [...dataTab2]; }
+            currentIndex = 0; updateUI();
         }
 
         function speakWord(event) {
-            event.stopPropagation(); 
-            if (currentList.length === 0) return;
-            
+            event.stopPropagation(); if (currentList.length === 0) return;
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(currentList[currentIndex].word);
-                utterance.lang = 'zh-CN'; 
-                utterance.rate = 0.9; 
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert("Trình duyệt của bạn không hỗ trợ tính năng phát âm!");
-            }
+                utterance.lang = 'zh-CN'; utterance.rate = 0.9; window.speechSynthesis.speak(utterance);
+            } else { alert("Trình duyệt không hỗ trợ phát âm!"); }
         }
 
-        // Khởi chạy
         fetchAllData();
     </script>
 </body>
