@@ -27,27 +27,55 @@
             display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
         }
         
-        /* Style cho các nút Tab điều hướng chính */
         .tab-btn { padding: 0.5rem 1rem; transition: all 0.3s; font-weight: 500; border-bottom: 4px solid transparent; }
         .tab-light-active { border-color: #2563eb; color: #2563eb; font-weight: bold; }
         .tab-light-inactive { color: #6b7280; }
         .tab-dark-active { border-color: #60a5fa; color: #60a5fa; font-weight: bold; }
         .tab-dark-inactive { color: #9ca3af; }
         
-        /* ÉP BUỘC ĐỊNH DẠNG ĐÊM ĐẸP MẮT CHO NỘI DUNG TỪ GOOGLE DOCS */
+        /* BẢN VÁ LỖI HIỂN THỊ: Khôi phục cấu trúc văn bản Google Docs */
+        .grammar-content {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+        }
+        /* Khôi phục bullet points và số thứ tự */
+        .grammar-content ul {
+            list-style-type: disc !important;
+            padding-left: 2rem !important;
+            margin-top: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+            display: block !important;
+        }
+        .grammar-content ol {
+            list-style-type: decimal !important;
+            padding-left: 2rem !important;
+            margin-top: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+            display: block !important;
+        }
+        .grammar-content li {
+            display: list-item !important;
+            margin-bottom: 0.3rem !important;
+            line-height: 1.6 !important;
+        }
+        /* Khôi phục khoảng cách đoạn văn và dòng trống */
+        .grammar-content p {
+            margin-bottom: 0.75rem !important;
+            min-height: 1.25rem; /* Cứu các dòng trống bị ép phẳng */
+            line-height: 1.6 !important;
+        }
+        /* Đồng bộ màu chữ ban đêm mà không làm hỏng cấu trúc HTML */
         .grammar-content * {
-            color: #d1d5db !important; /* Ép toàn bộ chữ thường thành màu sáng dịu */
-            background-color: transparent !important; /* Xóa bỏ nền trắng của Google Docs */
+            color: #d1d5db !important; 
+            background-color: transparent !important; 
             font-family: inherit !important;
         }
         .grammar-content strong, .grammar-content b {
-            color: #ffffff !important; /* Chữ in đậm sẽ có màu trắng sáng nổi bật */
+            color: #ffffff !important;
         }
-        /* Giữ khoảng cách thụt lề cho danh sách chuẩn xác */
-        .grammar-content ul, .grammar-content ol {
-            padding-left: 1.5rem !important;
-            margin-top: 0.25rem !important;
-            margin-bottom: 0.5rem !important;
+        /* Ép các thẻ span (dùng để thụt lề bằng phím Tab) hiển thị đúng */
+        .grammar-content span {
+            display: inline-block !important; 
         }
     </style>
 </head>
@@ -118,18 +146,15 @@
                 <button id="filter-hsk2" onclick="filterGrammar('HSK 2')" class="px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800">HSK 2</button>
                 <button id="filter-hsk3" onclick="filterGrammar('HSK 3')" class="px-3 py-1 text-xs rounded-full bg-gray-900 text-gray-400 border border-gray-800">HSK 3</button>
             </div>
-
-            <div id="grammar-list" class="space-y-4">
-                </div>
+            <div id="grammar-list" class="space-y-4"></div>
         </div>
-
     </div>
 
     <script>
-        // === KHAI BÁO CÁC ID DỮ LIỆU CỦA BẠN ===
+        // BẠN HÃY DÁN ĐÚNG 3 MÃ ID TÀI LIỆU CỦA BẠN VÀO ĐÂY NHÉ:
         const SHEET_ID_1 = '1xxNXhJK-Hk9lh53TTMO-6LQuG3bL4Lr7rLbM3GXMozQ';
         const SHEET_ID_2 = '1_ez_0lFsXbdyT-qaU3YqPlfETmG9uXMcvUqGrf8D34o';
-        const DOC_ID_3 = '1jcOSwG94v1em8bLXrDuvSz3IotRYnwoj6z8k0-nGoFQ'; // <-- BẠN NHỚ ĐIỀN ĐÚNG ID GOOGLE DOCS CỦA BẠN VÀO ĐÂY BIẾN NÀY NHÉ!
+        const DOC_ID_3 = '1jcOSwG94v1em8bLXrDuvSz3IotRYnwoj6z8k0-nGoFQ'; 
         // =======================================
 
         const URL_1 = `https://docs.google.com/spreadsheets/d/${SHEET_ID_1}/export?format=csv`;
@@ -151,7 +176,7 @@
                 document.getElementById('status-text').innerText = "Đồng bộ toàn bộ kho dữ liệu thành công!";
                 switchTab(1);
             } catch (error) {
-                document.getElementById('status-text').innerHTML = "<span class='text-red-500 font-bold'>⚠️ Lỗi đồng bộ. Hãy kiểm tra lại quyền chia sẻ liên kết của các file!</span>";
+                document.getElementById('status-text').innerHTML = "<span class='text-red-500 font-bold'>⚠️ Lỗi đồng bộ. Hãy kiểm tra ID file Docs!</span>";
             }
         }
 
@@ -176,12 +201,10 @@
             }
         }
 
-        // BỘ GIẢI MÃ TOÀN DIỆN MỚI: Giữ nguyên cấu trúc HTML để bảo toàn Số thứ tự, dấu chấm tròn và dòng trống
         function parseGrammarFromDocs(htmlText) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
-            // XỬ LÝ ĐỊNH DẠNG: Trích xuất và giới hạn vùng ảnh hưởng bộ CSS gốc của Google Docs
             const styles = doc.querySelectorAll('style');
             let rawCss = '';
             styles.forEach(s => rawCss += s.textContent);
@@ -194,7 +217,6 @@
             styleElement.textContent = scopeCSS(rawCss, '.grammar-content');
             document.head.appendChild(styleElement);
             
-            // BÓC TÁCH NỘI DUNG: Quét tuần tự toàn bộ các thẻ con nằm trong Body của Google Docs
             const children = Array.from(doc.body.children);
             dataGrammar = [];
             
@@ -220,7 +242,6 @@
                     currentContentHtml = [];
                 } else {
                     if (currentTitle) {
-                        // BẢO TOÀN ĐỊNH DẠNG: Giữ nguyên khối HTML gốc thay vì lấy chữ thô
                         currentContentHtml.push(child.outerHTML);
                     }
                 }
@@ -231,7 +252,6 @@
             }
         }
 
-        // Hàm thông minh giúp giới hạn mã định dạng ẩn của Google Docs, không làm hỏng giao diện tổng thể của web app
         function scopeCSS(cssText, prefix) {
             return cssText.replace(/([^\s{][^{]*)\{/g, function(match, selector) {
                 const prefixedSelectors = selector.split(',').map(sel => {
