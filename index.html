@@ -32,51 +32,6 @@
         .tab-light-inactive { color: #6b7280; }
         .tab-dark-active { border-color: #60a5fa; color: #60a5fa; font-weight: bold; }
         .tab-dark-inactive { color: #9ca3af; }
-        
-        /* BẢN VÁ LỖI HIỂN THỊ: Khôi phục cấu trúc văn bản Google Docs */
-        .grammar-content {
-            padding-left: 0.25rem;
-            padding-right: 0.25rem;
-        }
-        /* Khôi phục bullet points và số thứ tự */
-        .grammar-content ul {
-            list-style-type: disc !important;
-            padding-left: 2rem !important;
-            margin-top: 0.5rem !important;
-            margin-bottom: 0.5rem !important;
-            display: block !important;
-        }
-        .grammar-content ol {
-            list-style-type: decimal !important;
-            padding-left: 2rem !important;
-            margin-top: 0.5rem !important;
-            margin-bottom: 0.5rem !important;
-            display: block !important;
-        }
-        .grammar-content li {
-            display: list-item !important;
-            margin-bottom: 0.3rem !important;
-            line-height: 1.6 !important;
-        }
-        /* Khôi phục khoảng cách đoạn văn và dòng trống */
-        .grammar-content p {
-            margin-bottom: 0.75rem !important;
-            min-height: 1.25rem; /* Cứu các dòng trống bị ép phẳng */
-            line-height: 1.6 !important;
-        }
-        /* Đồng bộ màu chữ ban đêm mà không làm hỏng cấu trúc HTML */
-        .grammar-content * {
-            color: #d1d5db !important; 
-            background-color: transparent !important; 
-            font-family: inherit !important;
-        }
-        .grammar-content strong, .grammar-content b {
-            color: #ffffff !important;
-        }
-        /* Ép các thẻ span (dùng để thụt lề bằng phím Tab) hiển thị đúng */
-        .grammar-content span {
-            display: inline-block !important; 
-        }
     </style>
 </head>
 <body id="body-app" class="bg-blue-50 min-h-screen font-sans text-gray-800 py-8 transition-colors duration-500">
@@ -201,48 +156,54 @@
             }
         }
 
+        // BỘ GIẢI MÃ MỚI: Dọn dẹp hoàn toàn CSS, bắt tín hiệu trực tiếp từ Heading 1, 2, 3
         function parseGrammarFromDocs(htmlText) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
-            const styles = doc.querySelectorAll('style');
-            let rawCss = '';
-            styles.forEach(s => rawCss += s.textContent);
-            
-            let existingStyle = document.getElementById('gdocs-scoped-styles');
-            if (existingStyle) existingStyle.remove();
-            
-            const styleElement = document.createElement('style');
-            styleElement.id = 'gdocs-scoped-styles';
-            styleElement.textContent = scopeCSS(rawCss, '.grammar-content');
-            document.head.appendChild(styleElement);
-            
-            const children = Array.from(doc.body.children);
+            // Chỉ cần lấy tất cả các thẻ văn bản, không thèm quan tâm đến CSS của Google
+            const elements = doc.body.querySelectorAll('h1, h2, h3, p, li');
             dataGrammar = [];
             
             let currentLevel = "CHƯA PHÂN LOẠI";
             let currentTitle = "";
             let currentContentHtml = [];
             
-            children.forEach(child => {
-                const tag = child.tagName.toLowerCase();
+            elements.forEach(el => {
+                const tag = el.tagName.toLowerCase();
+                const text = el.textContent;
+                const trimmedText = text.trim();
+                
+                // Nếu người dùng cố tình để dòng trống thì tạo một khối tàng hình để tạo khoảng cách
+                if (trimmedText === '') {
+                    if (tag === 'p') {
+                        currentContentHtml.push(`<div class="h-4"></div>`);
+                    }
+                    return;
+                }
                 
                 if (tag === 'h1') {
                     if (currentTitle) {
                         dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContentHtml.join('') });
                     }
-                    currentLevel = child.textContent.trim().toUpperCase();
+                    currentLevel = trimmedText.toUpperCase();
                     currentTitle = "";
                     currentContentHtml = [];
                 } else if (tag === 'h2') {
                     if (currentTitle) {
                         dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContentHtml.join('') });
                     }
-                    currentTitle = child.textContent.trim();
+                    currentTitle = trimmedText;
                     currentContentHtml = [];
-                } else {
+                } else if (tag === 'h3') {
+                    // ĐỊNH DẠNG HEADING 3: Font to (text-lg), In đậm (font-bold), Màu trắng sáng (text-white)
                     if (currentTitle) {
-                        currentContentHtml.push(child.outerHTML);
+                        currentContentHtml.push(`<div class="text-lg font-bold text-white mt-5 mb-1">${trimmedText}</div>`);
+                    }
+                } else {
+                    // CHỮ BÌNH THƯỜNG: Màu xám dịu mắt, thụt lề nhẹ (pl-2)
+                    if (currentTitle) {
+                        currentContentHtml.push(`<div class="text-gray-300 mb-2 pl-2 leading-relaxed">${trimmedText}</div>`);
                     }
                 }
             });
@@ -250,18 +211,6 @@
             if (currentTitle) {
                 dataGrammar.push({ level: currentLevel, title: currentTitle, content: currentContentHtml.join('') });
             }
-        }
-
-        function scopeCSS(cssText, prefix) {
-            return cssText.replace(/([^\s{][^{]*)\{/g, function(match, selector) {
-                const prefixedSelectors = selector.split(',').map(sel => {
-                    sel = sel.trim();
-                    if (!sel) return '';
-                    if (sel === 'body') return prefix;
-                    return prefix + ' ' + sel;
-                }).filter(Boolean).join(', ');
-                return prefixedSelectors + ' {';
-            });
         }
 
         function csvToArray(text) {
@@ -343,7 +292,7 @@
                         <h3 class="text-xl font-bold text-blue-400 tracking-wide">${item.title}</h3>
                         <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-950 text-blue-400 uppercase tracking-widest border border-blue-900">${item.level}</span>
                     </div>
-                    <div class="grammar-content">${item.content}</div>
+                    <div>${item.content}</div>
                 `;
                 container.appendChild(div);
             });
